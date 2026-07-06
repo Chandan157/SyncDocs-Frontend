@@ -1,15 +1,12 @@
 'use client';
-
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FileText, Users, Trash, Settings, LogOut } from 'lucide-react';
 import { db } from '@/lib/indexeddb/db';
 import { useState, useEffect } from 'react';
-
 export function Sidebar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<{ id: string, email: string } | null>(null);
-
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.json())
@@ -18,7 +15,6 @@ export function Sidebar() {
       })
       .catch(console.error);
   }, []);
-
   return (
     <aside 
       className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-10"
@@ -28,7 +24,6 @@ export function Sidebar() {
           SyncDocs
         </h1>
       </div>
-      
       <nav className="flex-1 px-4 space-y-1">
         <Link 
           href="/"
@@ -52,7 +47,6 @@ export function Sidebar() {
           Trash
         </Link>
       </nav>
-
       <div className="p-4 border-t border-slate-200 space-y-1">
         <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-slate-200/50 text-slate-600 font-medium transition-colors text-sm">
           <Settings size={16} />
@@ -63,7 +57,6 @@ export function Sidebar() {
             await db.documents.clear();
             await db.operations.clear();
             await db.versions.clear();
-            
             const { logout } = await import('@/app/(auth)/actions');
             await logout();
           }}

@@ -1,13 +1,10 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-
 import { ArrowLeft, Sparkles, Share2, Clock, CheckCircle2, WifiOff, MoreVertical, ChevronRight, FileText, Star, Folder, Cloud, CloudOff, History, MessageSquare, Settings, LogOut } from 'lucide-react';
 import { db } from '@/lib/indexeddb/db';
-
 const TiptapEditor = dynamic(() => import('@/components/editor/TiptapEditor'), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full text-gray-500">Loading collaborative editor...</div>
@@ -22,11 +19,9 @@ export default function DocumentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string, email: string } | null>(null);
-  
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [historyData, setHistoryData] = useState<any[]>([]);
-
   const toggleHistory = async () => {
     setIsHistoryOpen(!isHistoryOpen);
     if (!isHistoryOpen && isOnline) {
@@ -40,90 +35,68 @@ export default function DocumentPage() {
       }
     }
   };
-
   useEffect(() => {
-    // Basic offline/online detection
     setIsOnline(navigator.onLine);
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
-    // Initialize Auth & Fetch Document from Backend API
     const init = async () => {
       try {
-        // Fetch current user details for the profile dropdown
         fetch('/api/auth/me')
           .then(res => res.json())
           .then(data => {
             if (!data.error) setCurrentUser(data);
           })
           .catch(err => console.error('Failed to fetch user:', err));
-
-        // Fetch the token independently first so the editor can connect even if doc fetch fails
         const tokenRes = await fetch('/api/auth/token');
         if (tokenRes.ok) {
           const { token: wsToken } = await tokenRes.json();
           setToken(wsToken);
         }
-
-        // Fetch document metadata from Next.js API route
         const res = await fetch(`/api/documents/${id}`);
-
         if (res.status === 403 || res.status === 401) {
           setError('You do not have access to this document or you are not logged in.');
           return;
         }
-
         if (res.ok) {
           const doc = await res.json();
           setTitle(doc.title);
-          // Also sync to offline storage
           db.documents.put(doc).catch(console.error);
         } else {
-          // Fallback to offline storage if server is unreachable
           const localDoc = await db.documents.get(id);
           if (localDoc) setTitle(localDoc.title);
         }
       } catch (err) {
         console.error('Error fetching document', err);
-        // Fallback to offline storage
         const localDoc = await db.documents.get(id);
         if (localDoc) setTitle(localDoc.title);
       } finally {
         setIsLoading(false);
       }
     };
-
     init();
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, [id, router]);
-
   const [isSavingTitle, setIsSavingTitle] = useState(false);
-
-  // Debounce the title save to backend and local DB
   useEffect(() => {
     const saveTitle = async () => {
-      if (title === 'Untitled Document' || !id) return; // Skip initial state or invalid id
-      
+      if (title === 'Untitled Document' || !id) return; 
       try {
         await db.documents.update(id, { title, updatedAt: new Date().toISOString() });
       } catch (err) {
         console.warn('Local document update failed, possibly missing:', err);
       }
-      
       if (isOnline) {
         setIsSavingTitle(true);
         try {
           await fetch(`/api/documents/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title || 'Untitled Document' }) // Ensure a title is sent
+            body: JSON.stringify({ title: title || 'Untitled Document' }) 
           });
         } catch (err) {
           console.error('Failed to sync title update to server:', err);
@@ -132,15 +105,12 @@ export default function DocumentPage() {
         }
       }
     };
-
-    const timeoutId = setTimeout(saveTitle, 500); // 500ms debounce
+    const timeoutId = setTimeout(saveTitle, 500); 
     return () => clearTimeout(timeoutId);
   }, [title, id, isOnline]);
-
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
   };
-
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
@@ -153,14 +123,12 @@ export default function DocumentPage() {
       </div>
     );
   }
-
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center bg-slate-50 text-slate-500">Authenticating...</div>;
   }
-
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Main Editor Area */}
+      {}
       <main className="flex-1 flex flex-col relative z-0 overflow-y-auto">
         <header className="sticky top-0 z-10 bg-[#f9fbfd] border-b border-slate-200 shadow-sm min-h-[76px] py-4 flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4">
@@ -189,7 +157,6 @@ export default function DocumentPage() {
               </div>
             </div>
           </div>
-          
           <div className="flex items-center gap-3">
             <button 
               onClick={toggleHistory}
@@ -198,13 +165,10 @@ export default function DocumentPage() {
             >
               <History size={22} strokeWidth={1.5} />
             </button>
-            
             <div className="w-px h-8 bg-slate-300 mx-1"></div>
-
-            {/* Portal for Share & Avatars */}
+            {}
             <div id="editor-header-portal" className="flex items-center gap-4"></div>
-
-            {/* Upgrade/AI Button */}
+            {}
             <button 
               onClick={() => setIsAiOpen(!isAiOpen)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-medium transition-all text-[14px] shadow-sm ml-2 ${
@@ -216,8 +180,7 @@ export default function DocumentPage() {
               <Sparkles size={16} />
               AI Boost
             </button>
-
-            {/* Profile Option */}
+            {}
             <div className="relative">
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -226,7 +189,6 @@ export default function DocumentPage() {
               >
                 {currentUser ? currentUser.email.charAt(0).toUpperCase() : 'U'}
               </button>
-              
               <AnimatePresence>
                 {isProfileOpen && (
                   <motion.div 
@@ -253,8 +215,6 @@ export default function DocumentPage() {
                            await db.operations.clear();
                            await db.versions.clear();
                            router.push('/');
-                           // Note: to fully logout server-side, call the logout Server Action here
-                           // by importing it, but since this is a simple UI update we just clear indexedDB and push to index
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-3 mt-1"
                       >
@@ -267,14 +227,12 @@ export default function DocumentPage() {
             </div>
           </div>
         </header>
-
         <div className="flex-1 py-12 px-4 w-full">
-          {/* Tiptap Editor handles the document state */}
+          {}
           <TiptapEditor documentId={id} />
         </div>
       </main>
-
-      {/* AI Assistant Sidebar */}
+      {}
       <AnimatePresence>
         {isAiOpen && (
           <motion.aside
@@ -288,7 +246,7 @@ export default function DocumentPage() {
               <h2 className="font-semibold text-slate-800 text-sm">AI Assistant</h2>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-               {/* Minimal AI Options */}
+               {}
                <div className="space-y-2">
                  {['Summarize', 'Fix Grammar', 'Make it Professional', 'Continue Writing'].map((opt) => (
                    <button key={opt} className="w-full p-3 text-left bg-white border border-slate-200 hover:border-purple-300 hover:shadow-sm rounded-xl transition-all text-sm font-medium text-slate-700">
@@ -296,8 +254,7 @@ export default function DocumentPage() {
                    </button>
                  ))}
                </div>
-               
-               {/* Chat Interface Placeholder */}
+               {}
                <div className="mt-8">
                  <div className="bg-white p-4 rounded-xl text-sm border border-purple-100 shadow-sm text-slate-600 leading-relaxed">
                     Hello! I'm your AI assistant. Select text in the editor to get started or ask me to generate something new.
@@ -307,8 +264,7 @@ export default function DocumentPage() {
           </motion.aside>
         )}
       </AnimatePresence>
-
-      {/* Version History Sidebar */}
+      {}
       <AnimatePresence>
         {isHistoryOpen && (
           <motion.aside
@@ -321,14 +277,12 @@ export default function DocumentPage() {
               <h2 className="text-lg text-slate-800">Version history</h2>
               <button className="p-1 hover:bg-slate-200 rounded-full text-slate-500 transition-colors"><MoreVertical size={20} /></button>
             </div>
-            
             <div className="p-4 border-b border-slate-200">
                <select className="w-full bg-white border border-slate-300 text-slate-700 py-1.5 px-3 rounded text-sm outline-none focus:border-blue-500">
                  <option>All versions</option>
                  <option>Named versions</option>
                </select>
             </div>
-
             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
               <div>
                 <h3 className="text-xs font-semibold text-slate-500 mb-3 ml-2 uppercase tracking-wide">Today</h3>
@@ -343,7 +297,6 @@ export default function DocumentPage() {
                           <ChevronRight size={16} className="text-slate-400" />
                         </div>
                       )}
-                      
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="font-medium text-slate-900 text-sm">
@@ -359,7 +312,6 @@ export default function DocumentPage() {
                       </div>
                     </div>
                   ))}
-                  
                   {historyData.length === 0 && (
                     <div className="text-center py-8 text-sm text-slate-400">
                       No history found.

@@ -1,5 +1,4 @@
 const postgres = require('postgres');
-
 async function migrate() {
   const client = postgres(process.env.DATABASE_URL, { prepare: false });
   try {

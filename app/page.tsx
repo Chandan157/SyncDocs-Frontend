@@ -1,12 +1,10 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Plus, Search, Settings, Trash, Users, LogOut, Edit2 } from 'lucide-react';
 import { db, LocalDocument } from '@/lib/indexeddb/db';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
-
 export default function Dashboard() {
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,32 +13,24 @@ export default function Dashboard() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const router = useRouter();
-
   useEffect(() => {
-    // Fetch current user
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => {
         if (!data.error) setCurrentUser(data);
       })
       .catch(console.error);
-
-    // Load documents from IndexedDB instantly (Offline-First)
     const loadDocs = async () => {
       const docs = await db.documents.orderBy('updatedAt').reverse().toArray();
       setDocuments(docs);
-
-      // Background Sync: Fetch from backend to update local storage
       try {
         const res = await fetch('/api/documents', { cache: 'no-store' });
         if (res.ok) {
           const serverDocs: LocalDocument[] = await res.json();
-          // Sync server docs to IndexedDB by wiping and replacing
           await db.documents.clear();
           if (serverDocs && serverDocs.length > 0) {
             await db.documents.bulkPut(serverDocs);
           }
-          // Update state with merged/latest docs
           const updatedDocs = await db.documents.orderBy('updatedAt').reverse().toArray();
           setDocuments(updatedDocs);
         } else {
@@ -52,8 +42,6 @@ export default function Dashboard() {
     };
     loadDocs();
   }, []);
-
-// ... (in component)
   const createNewDocument = async () => {
     try {
       const res = await fetch('/api/documents', {
@@ -63,11 +51,8 @@ export default function Dashboard() {
         },
         body: JSON.stringify({ title: 'Untitled Document' })
       });
-
       if (res.ok) {
         const newDoc = await res.json();
-        
-        // Save to IndexedDB for offline access
         const localDoc: LocalDocument = {
           id: newDoc.id,
           title: newDoc.title,
@@ -76,8 +61,6 @@ export default function Dashboard() {
           updatedAt: newDoc.updatedAt,
         };
         await db.documents.add(localDoc);
-        
-        // Navigate to the newly created document
         router.push(`/documents/${newDoc.id}`);
       } else {
         alert('Failed to create document on server.');
@@ -87,15 +70,11 @@ export default function Dashboard() {
       alert('Network error. Cannot create documents offline yet.');
     }
   };
-
   const deleteDocument = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // prevent navigation
+    e.stopPropagation(); 
     if (!confirm('Are you sure you want to delete this document?')) return;
-    
-    // Optimistic UI update
     setDocuments(prev => prev.filter(d => d.id !== id));
     await db.documents.delete(id);
-    
     try {
       const res = await fetch(`/api/documents/${id}`, {
         method: 'DELETE'
@@ -105,23 +84,18 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error('Error deleting document:', err);
-      // Not restoring UI silently, but alerting the user is good practice
     }
   };
-
   const startEditing = (e: React.MouseEvent, doc: LocalDocument) => {
     e.stopPropagation();
     setEditingId(doc.id);
     setEditTitle(doc.title);
   };
-
   const saveTitle = async (id: string) => {
     setEditingId(null);
     if (!editTitle.trim()) return;
-
     setDocuments(prev => prev.map(d => d.id === id ? { ...d, title: editTitle.trim() } : d));
     await db.documents.update(id, { title: editTitle.trim(), updatedAt: new Date().toISOString() });
-
     try {
       await fetch(`/api/documents/${id}`, {
         method: 'PUT',
@@ -132,22 +106,18 @@ export default function Dashboard() {
       console.error('Failed to sync title update to server:', err);
     }
   };
-
   const displayedDocs = documents.filter(doc => {
     if (doc.isShared) return false;
     if (searchQuery.trim() === '') return true;
     return doc.title.toLowerCase().includes(searchQuery.toLowerCase());
   });
-
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Sidebar */}
+      {}
       <Sidebar />
-
-      {/* Main Content */}
+      {}
       <main className="flex-1 flex flex-col relative z-0 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] rounded-l-2xl border-l border-slate-200">
-        
-        {/* Header */}
+        {}
         <header className="h-16 flex items-center justify-between px-8 border-b border-slate-100">
           <div className="relative w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -159,7 +129,6 @@ export default function Dashboard() {
               className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
             />
           </div>
-          
           <div className="flex items-center gap-4">
             <button 
               onClick={createNewDocument}
@@ -168,8 +137,7 @@ export default function Dashboard() {
               <Plus size={16} />
               New Document
             </button>
-
-            {/* Profile Option */}
+            {}
             <div className="relative">
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -178,7 +146,6 @@ export default function Dashboard() {
               >
                 {currentUser ? currentUser.email.charAt(0).toUpperCase() : 'U'}
               </button>
-              
               <AnimatePresence>
                 {isProfileOpen && (
                   <motion.div 
@@ -218,11 +185,9 @@ export default function Dashboard() {
             </div>
           </div>
         </header>
-
-        {/* Document Grid */}
+        {}
         <div className="p-8 overflow-y-auto">
           <h2 className="text-xl font-bold text-slate-800 tracking-tight mb-6">Recent Documents</h2>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {displayedDocs.map((doc, i) => (
               <div
@@ -268,7 +233,6 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
-            
             {documents.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileText size={48} className="mb-4 opacity-50 text-slate-300" />

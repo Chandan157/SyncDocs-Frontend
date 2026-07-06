@@ -1,33 +1,25 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Search } from 'lucide-react';
 import { db, LocalDocument } from '@/lib/indexeddb/db';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
-
 export default function SharedDocuments() {
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
   const router = useRouter();
-
   useEffect(() => {
-    // Load documents from IndexedDB instantly (Offline-First)
     const loadDocs = async () => {
       const docs = await db.documents.orderBy('updatedAt').reverse().toArray();
       setDocuments(docs);
-
-      // Background Sync: Fetch from backend to update local storage
       try {
         const res = await fetch('/api/documents', { cache: 'no-store' });
         if (res.ok) {
           const serverDocs: LocalDocument[] = await res.json();
-          // Sync server docs to IndexedDB by wiping and replacing
           await db.documents.clear();
           if (serverDocs && serverDocs.length > 0) {
             await db.documents.bulkPut(serverDocs);
           }
-          // Update state with merged/latest docs
           const updatedDocs = await db.documents.orderBy('updatedAt').reverse().toArray();
           setDocuments(updatedDocs);
         } else {
@@ -39,18 +31,14 @@ export default function SharedDocuments() {
     };
     loadDocs();
   }, []);
-
   const displayedDocs = documents.filter(doc => doc.isShared);
-
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Sidebar */}
+      {}
       <Sidebar />
-
-      {/* Main Content */}
+      {}
       <main className="flex-1 flex flex-col relative z-0 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.02)] rounded-l-2xl border-l border-slate-200">
-        
-        {/* Header */}
+        {}
         <header className="h-16 flex items-center justify-between px-8 border-b border-slate-100">
           <div className="relative w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -61,11 +49,9 @@ export default function SharedDocuments() {
             />
           </div>
         </header>
-
-        {/* Document Grid */}
+        {}
         <div className="p-8 overflow-y-auto">
           <h2 className="text-xl font-bold text-slate-800 tracking-tight mb-6">Shared with Me</h2>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {displayedDocs.map((doc, i) => (
               <div
@@ -89,7 +75,6 @@ export default function SharedDocuments() {
                 </div>
               </div>
             ))}
-            
             {displayedDocs.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
                 <FileText size={48} className="mb-4 opacity-50 text-slate-300" />

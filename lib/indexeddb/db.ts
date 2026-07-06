@@ -1,5 +1,4 @@
 import Dexie, { Table } from 'dexie';
-
 export interface LocalDocument {
   id: string;
   title: string;
@@ -10,7 +9,6 @@ export interface LocalDocument {
   isShared?: boolean;
   role?: string;
 }
-
 export interface LocalOperation {
   id: string;
   documentId: string;
@@ -18,9 +16,8 @@ export interface LocalOperation {
   version: number;
   timestamp: string;
 }
-
 export interface QueueOperation {
-  id: string; // Unique UUID
+  id: string; 
   documentId: string;
   operationType: 'CREATE_DOC' | 'UPDATE_DOC' | 'DELETE_DOC' | 'SYNC_OP';
   payload: any;
@@ -29,7 +26,6 @@ export interface QueueOperation {
   status: 'pending' | 'uploading' | 'synced' | 'failed';
   retryCount: number;
 }
-
 export interface LocalVersion {
   id: string;
   documentId: string;
@@ -37,19 +33,16 @@ export interface LocalVersion {
   createdBy: string;
   createdAt: string;
 }
-
 export interface LocalSetting {
   key: string;
   value: any;
 }
-
 export interface LocalUserCache {
   id: string;
   email: string;
   name?: string;
   avatar?: string;
 }
-
 export class SyncDocsDatabase extends Dexie {
   documents!: Table<LocalDocument, string>;
   operations!: Table<LocalOperation, string>;
@@ -57,7 +50,6 @@ export class SyncDocsDatabase extends Dexie {
   versions!: Table<LocalVersion, string>;
   settings!: Table<LocalSetting, string>;
   usersCache!: Table<LocalUserCache, string>;
-
   constructor() {
     super('SyncDocs');
     this.version(1).stores({
@@ -70,5 +62,4 @@ export class SyncDocsDatabase extends Dexie {
     });
   }
 }
-
 export const db = new SyncDocsDatabase();

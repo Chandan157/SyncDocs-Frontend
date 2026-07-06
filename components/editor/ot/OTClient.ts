@@ -1,71 +1,51 @@
 export type OpType = 'insert' | 'delete' | 'replace';
-
 export interface Operation {
   type: OpType;
   position: number;
   text?: string;
   length?: number;
 }
-
 export interface ClientOperation {
   revision: number;
   operation: Operation;
   clientId: string;
 }
-
 export class OTClient {
   public revision: number = 0;
   public documentId: string;
   public clientId: string;
   private ws!: WebSocket;
   private pendingOperations: ClientOperation[] = [];
-  
-  // Callbacks for Tiptap
   public onIncomingOperation?: (op: Operation) => void;
   public onDocumentLoaded?: (content: string, role?: string) => void;
   public onUserJoined?: (userId: string) => void;
   public onUserLeft?: (userId: string) => void;
-
   private wsUrl: string;
   private token: string;
   public isReconnecting: boolean = false;
-
   constructor(wsUrl: string, documentId: string, token: string) {
     this.wsUrl = wsUrl;
     this.token = token;
     this.documentId = documentId;
     this.clientId = crypto.randomUUID();
-    
     this.connect();
   }
-
   private connect() {
     this.ws = new WebSocket(`${this.wsUrl}?token=${this.token}`);
-    
     this.ws.onopen = () => {
       this.ws.send(JSON.stringify({ type: 'join-document', documentId: this.documentId }));
-      
-      // If we reconnected, we might have pending operations that were never sent or ACKed.
-      // We don't send them immediately; we wait for document-loaded to determine if there's a conflict.
-      // If there is no conflict, we will need to resend them.
     };
-
     this.ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       this.handleMessage(data);
     };
-
     this.ws.onclose = () => {
-      // Basic reconnection
       this.isReconnecting = true;
       setTimeout(() => this.connect(), 3000);
     };
   }
-
   public onError?: (msg: string) => void;
-
   public onReconnectDocumentLoaded?: (content: string, role?: string) => void;
-
   private handleMessage(data: any) {
     switch (data.type) {
       case 'error':
@@ -83,23 +63,16 @@ export class OTClient {
         break;
       case 'operation-applied':
         if (data.clientId === this.clientId) {
-          // ACK: Remove from pending
           this.pendingOperations.shift();
           this.revision = data.revision;
-          
-          // Send next pending if any
           if (this.pendingOperations.length > 0) {
             this.sendOperation(this.pendingOperations[0].operation);
           }
         } else {
-          // Incoming operation from someone else
           let incomingOp = data.operation as Operation;
-          
-          // Transform against our pending operations
           for (const pending of this.pendingOperations) {
             incomingOp = this.transform(incomingOp, pending.operation);
           }
-          
           this.revision = data.revision;
           if (this.onIncomingOperation) this.onIncomingOperation(incomingOp);
         }
@@ -112,29 +85,21 @@ export class OTClient {
         break;
     }
   }
-
   public applyLocalOperation(op: Operation) {
     const clientOp: ClientOperation = {
       revision: this.revision,
       operation: op,
       clientId: this.clientId
     };
-    
-    // Squash unsent full replacements to prevent massive queues when typing rapidly
     if (this.pendingOperations.length > 1 && op.type === 'replace' && op.position === 0) {
       this.pendingOperations = [this.pendingOperations[0], clientOp];
       return;
     }
-
     this.pendingOperations.push(clientOp);
-    
-    // If it's the only one in the queue, send immediately. 
-    // Otherwise it waits for the previous ACK.
     if (this.pendingOperations.length === 1) {
       this.sendOperation(op);
     }
   }
-
   private sendOperation(op: Operation) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
@@ -145,22 +110,17 @@ export class OTClient {
       }));
     }
   }
-
   public clearPendingOperations() {
     this.pendingOperations = [];
   }
-
   public resendPendingOperations() {
     if (this.pendingOperations.length > 0) {
       this.sendOperation(this.pendingOperations[0].operation);
     }
   }
-
   public destroy() {
     this.ws.close();
   }
-
-  // Client-side transformation is symmetrical to server
   private transform(op1: Operation, op2: Operation): Operation {
     let transformed: Operation = { ...op1 };
     if (op1.type === 'insert' && op2.type === 'insert') {

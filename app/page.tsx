@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Plus, Search, Settings, Trash, Users, LogOut } from 'lucide-react';
+import { FileText, Plus, Search, Settings, Trash, Users, LogOut, Edit2 } from 'lucide-react';
 import { db, LocalDocument } from '@/lib/indexeddb/db';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/Sidebar';
@@ -12,6 +12,8 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState<{ id: string, email: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -104,6 +106,30 @@ export default function Dashboard() {
     } catch (err) {
       console.error('Error deleting document:', err);
       // Not restoring UI silently, but alerting the user is good practice
+    }
+  };
+
+  const startEditing = (e: React.MouseEvent, doc: LocalDocument) => {
+    e.stopPropagation();
+    setEditingId(doc.id);
+    setEditTitle(doc.title);
+  };
+
+  const saveTitle = async (id: string) => {
+    setEditingId(null);
+    if (!editTitle.trim()) return;
+
+    setDocuments(prev => prev.map(d => d.id === id ? { ...d, title: editTitle.trim() } : d));
+    await db.documents.update(id, { title: editTitle.trim(), updatedAt: new Date().toISOString() });
+
+    try {
+      await fetch(`/api/documents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle.trim() })
+      });
+    } catch (err) {
+      console.error('Failed to sync title update to server:', err);
     }
   };
 
@@ -201,10 +227,17 @@ export default function Dashboard() {
             {displayedDocs.map((doc, i) => (
               <div
                 key={doc.id}
-                onClick={() => router.push(`/documents/${doc.id}`)}
+                onClick={() => { if (editingId !== doc.id) router.push(`/documents/${doc.id}`) }}
                 className="bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 rounded-xl p-4 cursor-pointer group flex flex-col transition-all duration-200 hover:-translate-y-1 relative"
               >
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+                   <button 
+                     onClick={(e) => startEditing(e, doc)}
+                     className="p-1.5 bg-white text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-md shadow-sm border border-slate-100 transition-colors"
+                     title="Edit title"
+                   >
+                     <Edit2 size={14} />
+                   </button>
                    <button 
                      onClick={(e) => deleteDocument(e, doc.id)}
                      className="p-1.5 bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md shadow-sm border border-slate-100 transition-colors"
@@ -216,8 +249,19 @@ export default function Dashboard() {
                 <div className="h-32 bg-slate-50 rounded-lg mb-4 flex items-center justify-center group-hover:bg-blue-50 transition-colors border border-slate-100">
                    <FileText size={32} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
                 </div>
-                <div className="px-1">
-                  <h3 className="font-semibold text-slate-800 text-base truncate">{doc.title}</h3>
+                <div className="px-1" onClick={e => { if (editingId === doc.id) e.stopPropagation(); }}>
+                  {editingId === doc.id ? (
+                    <input 
+                      autoFocus
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      onBlur={() => saveTitle(doc.id)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveTitle(doc.id); if (e.key === 'Escape') setEditingId(null); }}
+                      className="font-semibold text-slate-800 text-base truncate bg-blue-50 border border-blue-200 rounded px-1 -ml-1 outline-none focus:ring-2 focus:ring-blue-500/30 w-full"
+                    />
+                  ) : (
+                    <h3 className="font-semibold text-slate-800 text-base truncate">{doc.title}</h3>
+                  )}
                   <p className="text-xs text-slate-500 mt-1 font-medium">
                     Updated {new Date(doc.updatedAt).toLocaleDateString()}
                   </p>

@@ -200,7 +200,12 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    setPortalTarget(document.getElementById('editor-header-portal'));
+    const findPortal = () => {
+      const el = document.getElementById('editor-header-portal');
+      if (el) setPortalTarget(el);
+      else setTimeout(findPortal, 100);
+    };
+    findPortal();
   }, []);
 
   const [conflictState, setConflictState] = useState<{serverContent: string, localContent: string} | null>(null);
@@ -499,7 +504,7 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
              ))}
           </div>
           
-          {myRole === 'owner' && (
+          {myRole !== 'viewer' && (
             <div className="flex items-center bg-[#c2e7ff] text-[#001d35] rounded-full overflow-hidden transition-colors hover:bg-[#b0dcf5] ml-1 shadow-sm">
               <button 
                 onClick={() => {

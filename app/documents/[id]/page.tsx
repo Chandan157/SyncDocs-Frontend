@@ -169,17 +169,19 @@ export default function DocumentPage() {
             {}
             <div id="editor-header-portal" className="flex items-center gap-4"></div>
             {}
-            <button 
-              onClick={() => setIsAiOpen(!isAiOpen)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-medium transition-all text-[14px] shadow-sm ml-2 ${
-                isAiOpen 
-                ? 'bg-[#d2e3fc] text-[#1967d2] shadow-inner' 
-                : 'bg-[#e8f0fe] text-[#1967d2] hover:bg-[#d2e3fc]'
-              }`}
-            >
-              <Sparkles size={16} />
-              AI Boost
-            </button>
+            <div className="relative ml-2">
+              <button 
+                disabled
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full font-medium transition-all text-[14px] shadow-sm bg-[#e8f0fe] text-[#1967d2] opacity-70 cursor-not-allowed"
+                title="Coming Soon"
+              >
+                <Sparkles size={16} />
+                AI Boost
+              </button>
+              <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md border border-white rotate-12 pointer-events-none z-10">
+                Soon
+              </div>
+            </div>
             {}
             <div className="relative">
               <button 

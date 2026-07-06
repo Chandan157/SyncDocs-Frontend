@@ -44,6 +44,10 @@ export class OTClient {
     
     this.ws.onopen = () => {
       this.ws.send(JSON.stringify({ type: 'join-document', documentId: this.documentId }));
+      
+      // If we reconnected, we might have pending operations that were never sent or ACKed.
+      // We don't send them immediately; we wait for document-loaded to determine if there's a conflict.
+      // If there is no conflict, we will need to resend them.
     };
 
     this.ws.onmessage = (event) => {
@@ -126,12 +130,24 @@ export class OTClient {
   }
 
   private sendOperation(op: Operation) {
-    this.ws.send(JSON.stringify({
-      type: 'operation',
-      revision: this.revision,
-      operation: op,
-      clientId: this.clientId
-    }));
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
+        type: 'operation',
+        revision: this.revision,
+        operation: op,
+        clientId: this.clientId
+      }));
+    }
+  }
+
+  public clearPendingOperations() {
+    this.pendingOperations = [];
+  }
+
+  public resendPendingOperations() {
+    if (this.pendingOperations.length > 0) {
+      this.sendOperation(this.pendingOperations[0].operation);
+    }
   }
 
   public destroy() {

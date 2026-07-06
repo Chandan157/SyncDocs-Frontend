@@ -106,7 +106,12 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
     if (!token || !editor) return;
 
     // Connect to custom OT WebSocket Gateway
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:1234';
+    let wsUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsUrl) {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:1234';
+      wsUrl = backendUrl.replace(/^http/, 'ws');
+    }
+
     const client = new OTClient(wsUrl, documentId, token);
     otClientRef.current = client;
 
@@ -281,14 +286,22 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
           if (serverEmpty && !localEmpty) {
             // New document on server, but we have local content. Push local to server silently.
             if (otClientRef.current) {
+              otClientRef.current.clearPendingOperations();
               otClientRef.current.applyLocalOperation({ type: 'replace', position: 0, text: localContent });
             }
+          } else if (rawServer === rawLocal && otClientRef.current) {
+            // No difference, but we might have pending ops that were identical to what happened.
+            // Actually if they are perfectly identical, we just accept server silently and drop pending.
+            otClientRef.current.clearPendingOperations();
           } else {
             // No difference, or local is empty, or viewer -> accept server silently
             if (editor && !editor.isDestroyed) {
               isApplyingRef.current = true;
               editor.commands.setContent(serverContent);
               isApplyingRef.current = false;
+            }
+            if (otClientRef.current) {
+              otClientRef.current.clearPendingOperations();
             }
           }
         }
@@ -550,6 +563,7 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
                   <button 
                     onClick={() => {
                       if (otClientRef.current) {
+                        otClientRef.current.clearPendingOperations();
                         otClientRef.current.applyLocalOperation({ 
                           type: 'replace', 
                           position: 0, 
@@ -580,6 +594,9 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
                         editor.commands.setContent(conflictState.serverContent);
                         isApplyingRef.current = false;
                       }
+                      if (otClientRef.current) {
+                        otClientRef.current.clearPendingOperations();
+                      }
                       setConflictState(null);
                     }}
                     className="w-full py-2.5 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-100 active:scale-[0.98] rounded-lg font-medium transition-all shadow-sm"
@@ -600,6 +617,7 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
                      isApplyingRef.current = false;
                    }
                    if (otClientRef.current) {
+                     otClientRef.current.clearPendingOperations();
                      otClientRef.current.applyLocalOperation({ 
                        type: 'replace', 
                        position: 0, 

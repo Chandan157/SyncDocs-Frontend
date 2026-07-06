@@ -140,12 +140,18 @@ export default function TiptapEditor({ documentId }: { documentId: string }) {
         if (serverEmpty && !localEmpty) {
             // New document on server, but we have local content. Push local to server silently.
             if (otClientRef.current) {
+              otClientRef.current.clearPendingOperations();
               otClientRef.current.applyLocalOperation({ type: 'replace', position: 0, text: localContent });
             }
+        } else if (rawServer === rawLocal && otClientRef.current) {
+            otClientRef.current.clearPendingOperations();
         } else {
             isApplyingRef.current = true;
             editor.commands.setContent(serverContent);
             isApplyingRef.current = false;
+            if (otClientRef.current) {
+              otClientRef.current.clearPendingOperations();
+            }
         }
       }
       

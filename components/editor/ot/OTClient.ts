@@ -120,6 +120,12 @@ export class OTClient {
       clientId: this.clientId
     };
     
+    // Squash unsent full replacements to prevent massive queues when typing rapidly
+    if (this.pendingOperations.length > 1 && op.type === 'replace' && op.position === 0) {
+      this.pendingOperations = [this.pendingOperations[0], clientOp];
+      return;
+    }
+
     this.pendingOperations.push(clientOp);
     
     // If it's the only one in the queue, send immediately. 

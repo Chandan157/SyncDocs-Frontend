@@ -216,7 +216,8 @@ export default function DocumentPage() {
                            await db.documents.clear();
                            await db.operations.clear();
                            await db.versions.clear();
-                           router.push('/');
+                           const { logout } = await import('@/app/(auth)/actions');
+                           await logout();
                         }}
                         className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-3 mt-1"
                       >
